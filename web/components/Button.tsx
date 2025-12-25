@@ -4,7 +4,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'danger' | 'ghost' | 'outline';
     size?: 'sm' | 'md' | 'lg';
     children: React.ReactNode;
-    className?: string; // Allow custom class overrides
+    className?: string;
 }
 
 export function Button({

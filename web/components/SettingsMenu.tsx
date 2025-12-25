@@ -4,18 +4,17 @@ import { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useRouter } from 'next/navigation'; // Added router for logout redirection
+import { useRouter } from 'next/navigation';
 
 type SettingsView = 'menu' | 'org' | 'volunteer' | 'profile';
 
 export function SettingsMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const [view, setView] = useState<SettingsView>('menu');
-    const [profileData, setProfileData] = useState<any>(null); // For user profile
-    const router = useRouter(); // Added router for logout redirection
+    const [profileData, setProfileData] = useState<any>(null);
+    const router = useRouter();
 
     useEffect(() => {
-        // Load profile from local storage when menu opens
         if (isOpen) {
             const stored = localStorage.getItem('user_profile');
             if (stored) {
@@ -30,7 +29,6 @@ export function SettingsMenu() {
             return;
         }
         try {
-            // Update Firestore
             const q = query(collection(db, 'users'), where('aadhar', '==', profileData.aadhar));
             const querySnapshot = await getDocs(q);
 
@@ -42,7 +40,6 @@ export function SettingsMenu() {
                     bloodGroup: profileData.bloodGroup || ''
                 });
             } else {
-                // If user doesn't exist, create a new one (or handle as an error)
                 await addDoc(collection(db, 'users'), {
                     aadhar: profileData.aadhar,
                     phone: profileData.phone,
@@ -52,7 +49,6 @@ export function SettingsMenu() {
                 });
             }
 
-            // Update Local Storage
             localStorage.setItem('user_profile', JSON.stringify(profileData));
             alert('Profile Updated Successfully!');
             setView('menu');
@@ -74,7 +70,6 @@ export function SettingsMenu() {
     const [hasVol, setHasVol] = useState(false);
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-    // Load Theme on open
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem('theme');
@@ -97,11 +92,9 @@ export function SettingsMenu() {
         }
     };
 
-    // Fetch existing Org/Vol data on open
     useEffect(() => {
         if (isOpen && profileData?.fullName) {
             const fetchData = async () => {
-                // Check Org
                 const orgQ = query(collection(db, 'organizations'), where('owner', '==', profileData.fullName));
                 const orgSnap = await getDocs(orgQ);
                 if (!orgSnap.empty) {
@@ -110,9 +103,6 @@ export function SettingsMenu() {
                     setOrgData({ id: orgSnap.docs[0].id, name: data.name, owner: data.owner, societyRegNo: data.societyRegNo, address: data.address });
                 }
 
-                // Check Volunteer
-                // Assuming volunteer name matches profile full name for now or we query by some ID? 
-                // The current app doesn't strictly link them by ID, relying on Name/Phone match might be weak but let's stick to Name for consistency with User request "register as volunteer"
                 const volQ = query(collection(db, 'volunteers'), where('name', '==', profileData.fullName));
                 const volSnap = await getDocs(volQ);
                 if (!volSnap.empty) {
@@ -133,13 +123,11 @@ export function SettingsMenu() {
         }
     }, [isOpen, profileData]);
 
-    // Prevent scrolling when menu is open
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
-            // Reset view when closed
             setTimeout(() => setView('menu'), 300);
         }
         return () => {
@@ -154,7 +142,6 @@ export function SettingsMenu() {
         }
         try {
             if (hasOrg && orgData.id) {
-                // Update
                 await updateDoc(doc(db, 'organizations', orgData.id), {
                     name: orgData.name,
                     owner: orgData.owner,
@@ -163,10 +150,9 @@ export function SettingsMenu() {
                 });
                 alert('Organization Details Updated!');
             } else {
-                // Create
                 await addDoc(collection(db, 'organizations'), {
                     name: orgData.name,
-                    owner: orgData.owner, // Ensure this matches profileData.fullName for detection
+                    owner: orgData.owner,
                     societyRegNo: orgData.societyRegNo,
                     address: orgData.address,
                     timestamp: new Date().toISOString()
@@ -187,7 +173,6 @@ export function SettingsMenu() {
         }
         try {
             if (hasVol && volData.id) {
-                // Update
                 await updateDoc(doc(db, 'volunteers', volData.id), {
                     name: volData.name,
                     age: volData.age,
@@ -198,7 +183,6 @@ export function SettingsMenu() {
                 });
                 alert('Volunteer Profile Updated!');
             } else {
-                // Create
                 await addDoc(collection(db, 'volunteers'), {
                     name: volData.name,
                     age: volData.age,
@@ -231,7 +215,6 @@ export function SettingsMenu() {
 
     const handleOpenVolunteer = () => {
         if (!hasVol && profileData) {
-            // Only auto-fill if new registration
             setVolData({
                 ...volData,
                 name: profileData.fullName || '',
@@ -247,7 +230,7 @@ export function SettingsMenu() {
         if (!hasOrg && profileData) {
             setOrgData({
                 ...orgData,
-                owner: profileData.fullName || '' // Auto-fill owner for consistency
+                owner: profileData.fullName || ''
             });
         }
         setView('org');
@@ -265,7 +248,6 @@ export function SettingsMenu() {
                 </button>
             </div>
 
-            {/* Overlay */}
             {isOpen && (
                 <div
                     className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] animate-in fade-in duration-200"
@@ -273,7 +255,6 @@ export function SettingsMenu() {
                 />
             )}
 
-            {/* Sidebar */}
             <div className={`fixed top-0 right-0 h-full w-80 bg-white dark:bg-neutral-900 shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 <div className="pl-6 py-6 pr-1 h-full flex flex-col">
                     <div className="flex justify-between items-center mb-8 pr-4">
@@ -349,7 +330,6 @@ export function SettingsMenu() {
                                             const newState = !current;
                                             localStorage.setItem('notifications_enabled', newState.toString());
 
-                                            // Browser Permission Request
                                             if (newState) {
                                                 if (!("Notification" in window)) {
                                                     alert("This browser does not support desktop notifications");
@@ -358,24 +338,23 @@ export function SettingsMenu() {
                                                     if (permission === "granted") {
                                                         new Notification("CrisisSync Alerts Activated", {
                                                             body: "You will now receive emergency alerts even if the tab is inactive.",
-                                                            icon: "/favicon.ico" // Optional icon
+                                                            icon: "/favicon.ico"
                                                         });
                                                     }
                                                 }
                                             }
 
-                                            // Force visual update (temporary hack for non-state preference)
                                             const btn = document.getElementById('notif-toggle-knob');
                                             const track = document.getElementById('notif-toggle-track');
                                             if (btn && track) {
-                                                if (newState) { // Turning ON
+                                                if (newState) {
                                                     track.classList.remove('bg-neutral-200');
                                                     track.classList.add('bg-orange-500');
                                                     btn.style.left = 'calc(100% - 1.15rem)';
-                                                } else { // Turning OFF
+                                                } else {
                                                     track.classList.remove('bg-orange-500');
                                                     track.classList.add('bg-neutral-200');
-                                                    btn.style.left = '0.125rem'; // left-0.5
+                                                    btn.style.left = '0.125rem';
                                                 }
                                             }
                                             alert(`Notifications ${newState ? 'Enabled' : 'Disabled'}`);

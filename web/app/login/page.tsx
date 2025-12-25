@@ -10,7 +10,6 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Check if user is already logged in
         const userProfile = localStorage.getItem('user_profile');
         if (userProfile) {
             router.replace('/');
@@ -20,7 +19,7 @@ export default function LoginPage() {
     }, [router]);
 
     if (isLoading) {
-        return null; // Don't render anything while checking auth
+        return null;
     }
 
     return (

@@ -19,7 +19,7 @@ type Report = {
         longitude: number;
         accuracy: number;
     };
-    userId?: string; // ID of the user who reported
+    userId?: string;
     orgPledges?: { orgName: string; count: number }[];
 };
 
@@ -27,7 +27,7 @@ type UserProfile = {
     id?: string;
     fullName: string;
     role?: string;
-    activeVolunteerId?: string; // ID of the report currently volunteering for
+    activeVolunteerId?: string;
 };
 
 export function DashboardView() {
@@ -37,28 +37,19 @@ export function DashboardView() {
     const [locationFilter, setLocationFilter] = useState('All');
     const [volunteeredReports, setVolunteeredReports] = useState<string[]>([]);
 
-    // Advanced Features State
     const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
     const [isAdmin, setIsAdmin] = useState(false);
     const [userOrg, setUserOrg] = useState<{ id: string; name: string } | null>(null);
     const [isRegisteredVolunteer, setIsRegisteredVolunteer] = useState(false);
 
-    // Initial Load & Auth Check
     useEffect(() => {
         const stored = localStorage.getItem('user_profile');
         if (stored) {
             const user = JSON.parse(stored);
             setCurrentUser(user);
             setIsAdmin(user.role === 'admin' || (user.email === 'nitsxcreation@gmail.com'));
-
-            // If we have a user ID (simulated or real), we could listen to their profile
-            // For this prototype, we'll assume 'activeVolunteerId' is synced to LS or we just use Firestore blindly
-            // let's rely on Firestore listener for the specific user document if possible, 
-            // but since we are using 'aadhar' as ID often in login but auto-generated ID in Firestore, 
-            // we might need to query. To keep it simple, we will query reports where we are volunteering.
         }
 
-        // Load volunteered reports from local storage
         const storedVolunteered = localStorage.getItem('volunteered_reports');
         if (storedVolunteered) {
             setVolunteeredReports(JSON.parse(storedVolunteered));
@@ -69,14 +60,12 @@ export function DashboardView() {
         if (!currentUser?.fullName) return;
 
         const checkProfiles = async () => {
-            // Check Org Ownership
             const orgQ = query(collection(db, 'organizations'), where('owner', '==', currentUser.fullName));
             const orgSnap = await getDocs(orgQ);
             if (!orgSnap.empty) {
                 setUserOrg({ id: orgSnap.docs[0].id, name: orgSnap.docs[0].data().name });
             }
 
-            // Check Volunteer Registration
             const volQ = query(collection(db, 'volunteers'), where('name', '==', currentUser.fullName));
             const volSnap = await getDocs(volQ);
             if (!volSnap.empty) {
@@ -90,7 +79,6 @@ export function DashboardView() {
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        // Real-time listener for reports from Firestore
         const q = query(collection(db, 'reports'), orderBy('timestamp', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -101,7 +89,6 @@ export function DashboardView() {
             setReports(newReports);
             setLoading(false);
 
-            // Artificial delay to ensure user sees the spin duration
             setTimeout(() => {
                 setIsRefreshing(false);
             }, 1000);
@@ -132,7 +119,6 @@ export function DashboardView() {
             setVolunteeredReports(updated);
             localStorage.setItem('volunteered_reports', JSON.stringify(updated));
 
-            // alert("Thanks for volunteering! You are now assigned to this emergency.");
         } catch (error) {
             console.error("Error volunteering:", error);
         }
@@ -181,7 +167,7 @@ export function DashboardView() {
 
     const [resolvingId, setResolvingId] = useState<string | null>(null);
     const [resolutionNote, setResolutionNote] = useState('');
-    const [selectedReport, setSelectedReport] = useState<Report | null>(null); // For Info Modal
+    const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
     const initiateResolution = (id: string) => {
         setResolvingId(id);
@@ -197,7 +183,6 @@ export function DashboardView() {
 
             if (!report) return;
 
-            // Security: Log this resolution to a separate secured collection
             await addDoc(collection(db, 'resolution_logs'), {
                 reportId: resolvingId,
                 reportType: report.type,
@@ -222,20 +207,7 @@ export function DashboardView() {
     };
 
     const filteredReports = reports.filter(r => {
-        // 1. Hide Resolved > 3 Hours
         if (r.status === 'resolved') {
-            const resolvedTime = new Date(r.timestamp).getTime(); // Note: Ideally we'd valid resolution time, using report creation time as proxy for now or if we stored 'resolvedAt'
-            // Let's assume timestamp is creation. If resolved, we might not know WHEN.
-            // Actually, let's just show them for now, or if user requested "deleted after 3 hours", 
-            // maybe we should FILTER them out here if (Now - Timestamp) > 3h AND status=resolved?
-            // Risk: Old unresolved reports might stay forever? User said "if the emergency has been resolved it should be deleted after 3hours"
-            // So: Status == Resolved AND (Now - Timestamp) > 3 hours -> Hide.
-            // Better: If we recorded 'resolvedAt', use that. Since we don't, we'll use 'last modified' if available?
-            // Fallback: Use CurrentTime - ReportTime for everything? No.
-            // Let's use a rough estimate: If resolved, check creation time. 
-            // If creation was > 24h ago, hide? 
-            // Strict interpretation: "deleted after 3 hours". This implies data deletion or hiding.
-            // Let's HIDE locally first.
             const reportTime = new Date(r.timestamp).getTime();
             const threeHours = 3 * 60 * 60 * 1000;
             if (Date.now() - reportTime > threeHours) return false;
@@ -245,20 +217,13 @@ export function DashboardView() {
         if (locationFilter === 'Near Me') return true;
         return r.address?.includes(locationFilter) || false;
     }).sort((a, b) => {
-        // 2. Pinned Logic: My emergencies top
-        // Assuming we rely on Aadhar or Name match for "My Emergency" since we don't strictly have UIDs on reports everywhere
-        // But let's assume we saved 'userId' or check if 'details' contains my name?
-        // Let's match if 'a.reportName' == currentUser.fullName (if we had that).
-        // Current Report schema has... nothing linking to user except maybe if we added it.
-        // STARTING NOW: We should add userId to reports. existing reports won't have it.
-
-        const amIOwnerA = currentUser?.fullName && (a.details.includes(currentUser.fullName)); // Weak check for legacy
+        const amIOwnerA = currentUser?.fullName && (a.details.includes(currentUser.fullName));
         const amIOwnerB = currentUser?.fullName && (b.details.includes(currentUser.fullName));
 
         if (amIOwnerA && !amIOwnerB) return -1;
         if (!amIOwnerA && amIOwnerB) return 1;
 
-        return 0; // Maintain default sort (timestamp desc)
+        return 0;
     });
 
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -275,8 +240,6 @@ export function DashboardView() {
 
     const SidebarContent = () => (
         <div className="flex flex-col h-full gap-2">
-            {/* Map Widget - Takes remaining space */}
-            {/* Map Widget - Click to Load Realtime NDMA Integration */}
             <div
                 className="bg-neutral-900 rounded-lg overflow-hidden border border-neutral-700 relative flex-1 min-h-[250px] group cursor-pointer"
             >
@@ -288,7 +251,6 @@ export function DashboardView() {
                             title="Live Weather Risk Map"
                             allowFullScreen
                         />
-                        {/* Close Button for Map */}
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowRealMap(false); }}
                             className="absolute top-2 right-2 bg-black/50 hover:bg-black/80 text-white rounded-full p-1 transition-colors z-20"
@@ -299,12 +261,10 @@ export function DashboardView() {
                     </div>
                 ) : (
                     <div className="absolute inset-0 w-full h-full" onClick={() => setShowRealMap(true)}>
-                        {/* Mock Map UI */}
                         <div className="absolute inset-0 bg-[#242f3e] opacity-80">
                             <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(#3a4b61 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                         </div>
 
-                        {/* Restricted Zones Overlay */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-red-500/50 rounded-full"></div>
 
@@ -317,7 +277,6 @@ export function DashboardView() {
                 )}
             </div>
 
-            {/* Stats - Compact & Stacked */}
             <div className="bg-white dark:bg-neutral-800 p-4 rounded-lg shadow-sm border border-neutral-100 dark:border-neutral-700 shrink-0">
                 <h3 className="text-neutral-500 text-xs font-medium uppercase tracking-wider">Active Incidents</h3>
                 <p className="text-2xl font-bold mt-1 text-neutral-900 dark:text-white">{reports.filter(r => r.status !== 'resolved').length}</p>
@@ -337,12 +296,10 @@ export function DashboardView() {
 
     return (
         <div className="relative h-[calc(100vh-100px)] lg:h-[calc(100vh-180px)] pt-16 lg:pt-0">
-            {/* Info Modal */}
             {selectedReport && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedReport(null)}>
                     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-full max-w-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
 
-                        {/* Header */}
                         <div className="p-5 border-b border-neutral-100 dark:border-neutral-700 flex justify-between items-center bg-neutral-50/50 dark:bg-white/5">
                             <div>
                                 <h3 className="text-xl font-bold dark:text-white flex items-center gap-2">
@@ -356,24 +313,13 @@ export function DashboardView() {
                             <button onClick={() => setSelectedReport(null)} className="p-2 hover:bg-neutral-200 dark:hover:bg-neutral-600 rounded-full transition-colors">✕</button>
                         </div>
 
-                        {/* Content Container - Fixed Height with Flex */}
                         <div className="flex flex-col overflow-hidden h-full max-h-[80vh]">
 
-                            {/* Scrollable Content */}
                             <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
 
-                                {/* Removed Old Grid */}
-
-                                {/* Organization List - Flex 1 to take remaining space if we wanted it sticky, but user asked for "page not scrollable, only org pledges". 
-                                Actually, the user asked "make only the organization pledges scrollable not the whole page". 
-                                This implies structure: Header (Fixed) -> Stats (Fixed) -> Org List (Scrollable) -> Services (Fixed/Bottom).
-                                Let's adjust the layout above to achieve this.
-                            */}
-
-                            </div> {/* Close previous div to restructure */}
+                            </div>
 
                             <div className="px-6 flex shrink-0 gap-4 mb-4">
-                                {/* Volunteer Stats Grid - Fixed Top */}
                                 <div className="flex-1 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30 text-center">
                                     <div className="text-2xl font-bold dark:text-white">{selectedReport.volunteerCount || 0}</div>
                                     <div className="text-xs text-neutral-500 uppercase font-bold tracking-wider">Volunteers</div>
@@ -384,7 +330,6 @@ export function DashboardView() {
                                 </div>
                             </div>
 
-                            {/* Scrollable Org List Area */}
                             <div className="flex-1 overflow-y-auto px-6 min-h-0 border-t border-b border-neutral-100 dark:border-neutral-800 py-4 bg-neutral-50/30 dark:bg-black/20">
                                 <h4 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-wide mb-3 sticky top-0 bg-transparent backdrop-blur-sm z-10 py-1">
                                     🤝 Organization Pledges ({(selectedReport.orgPledges?.length || 0)})
@@ -407,32 +352,32 @@ export function DashboardView() {
                                 )}
                             </div>
 
-                            {/* Fixed Footer Services */}
-                            <div className="p-6 bg-white dark:bg-neutral-800 shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                        </div>
 
-                                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
-                                    <h4 className="text-xs font-bold uppercase text-blue-800 dark:text-blue-300 mb-2">Services Notified</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {(() => {
-                                            const getNotified = (type: string) => {
-                                                const base = ['Nearby Volunteers'];
-                                                if (type === 'panic') return ['Police Department', 'District Organizations', 'Nearby Volunteers'];
-                                                if (type === 'fire') return ['Fire Department', 'Medical Team', ...base];
-                                                if (type === 'medical') return ['Ambulance', 'Nearby Hospitals', ...base];
-                                                if (type === 'accident') return ['Police', 'Ambulance', ...base];
-                                                if (type === 'violence') return ['Police Department', ...base];
-                                                if (type === 'disaster') return ['Disaster Relief Team', 'State Control Room', 'District Organizations', ...base];
-                                                return ['Police Control Room', ...base];
-                                            };
+                        <div className="p-6 bg-white dark:bg-neutral-800 shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
 
-                                            return getNotified(selectedReport.type).map(service => (
-                                                <span key={service} className="px-2 py-1 bg-white dark:bg-neutral-800 rounded border border-blue-100 dark:border-blue-900 text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                                                    {service}
-                                                </span>
-                                            ));
-                                        })()}
-                                    </div>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                                <h4 className="text-xs font-bold uppercase text-blue-800 dark:text-blue-300 mb-2">Services Notified</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {(() => {
+                                        const getNotified = (type: string) => {
+                                            const base = ['Nearby Volunteers'];
+                                            if (type === 'panic') return ['Police Department', 'District Organizations', 'Nearby Volunteers'];
+                                            if (type === 'fire') return ['Fire Department', 'Medical Team', ...base];
+                                            if (type === 'medical') return ['Ambulance', 'Nearby Hospitals', ...base];
+                                            if (type === 'accident') return ['Police', 'Ambulance', ...base];
+                                            if (type === 'violence') return ['Police Department', ...base];
+                                            if (type === 'disaster') return ['Disaster Relief Team', 'State Control Room', 'District Organizations', ...base];
+                                            return ['Police Control Room', ...base];
+                                        };
+
+                                        return getNotified(selectedReport.type).map(service => (
+                                            <span key={service} className="px-2 py-1 bg-white dark:bg-neutral-800 rounded border border-blue-100 dark:border-blue-900 text-xs font-medium text-blue-700 dark:text-blue-300 flex items-center gap-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                                {service}
+                                            </span>
+                                        ));
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -440,7 +385,6 @@ export function DashboardView() {
                 </div>
             )}
 
-            {/* Resolution Modal */}
             {resolvingId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl w-full max-w-md border border-neutral-200 dark:border-neutral-700 overflow-hidden">
@@ -471,7 +415,6 @@ export function DashboardView() {
                 </div>
             )}
 
-            {/* Mobile Sidebar Toggle */}
             <button
                 onClick={() => setIsStatsOpen(true)}
                 className="lg:hidden fixed right-0 top-6 z-40 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm p-2 pr-4 pl-4 rounded-l-full shadow-lg border-y border-l border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-orange-500 transition-colors flex items-center justify-center h-12"
@@ -482,7 +425,6 @@ export function DashboardView() {
                 </svg>
             </button>
 
-            {/* Mobile Sidebar Overlay */}
             {isStatsOpen && (
                 <div className="fixed inset-0 z-50 lg:hidden">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsStatsOpen(false)} />
@@ -499,7 +441,6 @@ export function DashboardView() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-                {/* Main Content - Live Feed */}
                 <div className="lg:col-span-3 bg-white dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col h-full">
                     <div className="p-6 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center shrink-0 bg-white dark:bg-neutral-800 z-10">
                         <div className="flex items-center gap-4">
@@ -542,12 +483,10 @@ export function DashboardView() {
                         ) : (
                             filteredReports.map((report) => (
                                 <div key={report.id} className="relative p-6 hover:bg-neutral-50 dark:hover:bg-neutral-700/50 transition-colors group">
-                                    {/* Header Section */}
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-3">
                                             <div>
                                                 <h3 className="font-bold text-lg capitalize text-neutral-900 dark:text-white flex items-center gap-2">
-                                                    {/* Emergency Icon based on type - Simple dot for now or use a mapping */}
                                                     <span className={`w-2 h-2 rounded-full ${report.type === 'fire' ? 'bg-orange-500' : report.type === 'medical' ? 'bg-red-500' : 'bg-blue-500'}`}></span>
                                                     {report.type} Emergency
                                                 </h3>
@@ -566,7 +505,6 @@ export function DashboardView() {
                                         </div>
                                     </div>
 
-                                    {/* Location & Details */}
                                     <div className="space-y-4 mb-4">
                                         <div className="flex items-start gap-2 text-sm text-neutral-600 dark:text-neutral-300">
                                             <span className="font-bold text-neutral-500 dark:text-neutral-400">Location:</span>
@@ -612,7 +550,6 @@ export function DashboardView() {
                                         )}
                                     </div>
 
-                                    {/* Actions Footer */}
                                     <div className="flex flex-wrap items-center gap-3 pt-2">
                                         {report.status !== 'resolved' && (!currentUser?.id || report.userId !== currentUser.id) && (
                                             <button
@@ -628,9 +565,6 @@ export function DashboardView() {
                                             </button>
                                         )}
 
-                                        {/* Organization Volunteer Button - Only for Org Owners */}
-                                        {/* Organization Volunteer Button - Only for Org Owners */}
-                                        {/* Organization Volunteer Button - Only for Org Owners AND NOT THEIR OWN REPORT */}
                                         {userOrg && report.status !== 'resolved' && (!currentUser?.id || report.userId !== currentUser.id) && (
                                             <>
                                                 {pledgingReportId === report.id ? (
@@ -693,7 +627,6 @@ export function DashboardView() {
                                                 Resolve
                                             </button>
                                         )}
-                                        {/* Admin Delete Button */}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => handleDelete(report.id)}
@@ -705,7 +638,6 @@ export function DashboardView() {
                                         )}
                                     </div>
 
-                                    {/* Info Button - Bottom Right Absolute */}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setSelectedReport(report); }}
                                         className="absolute bottom-6 right-6 w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-neutral-500 dark:text-neutral-400 hover:text-orange-600 transition-colors flex items-center justify-center border border-neutral-200 dark:border-neutral-700"
@@ -723,7 +655,6 @@ export function DashboardView() {
                     </div>
                 </div>
 
-                {/* Desktop Sidebar - Fixed Layout */}
                 <div className="hidden lg:block lg:col-span-1 h-full overflow-hidden">
                     <SidebarContent />
                 </div>

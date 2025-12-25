@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/Button';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { collection, query, onSnapshot, getDocs, writeBatch, doc, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, writeBatch, doc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type Contact = {
@@ -66,11 +65,9 @@ export default function HelpLinesPage() {
     };
 
     useEffect(() => {
-        // Real-time listener
         const q = query(collection(db, 'helplines'));
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             if (snapshot.empty) {
-                // Seed data if empty
                 console.log("Seeding helplines data...");
                 try {
                     const batch = writeBatch(db);
@@ -79,10 +76,9 @@ export default function HelpLinesPage() {
                         batch.set(docRef, contact);
                     });
                     await batch.commit();
-                    // Snapshot will fire again after write
                 } catch (e) {
                     console.error("Error seeding helplines:", e);
-                    setLoading(false); // Stop loading on error
+                    setLoading(false);
                 }
             } else {
                 const fetchedContacts = snapshot.docs.map(doc => ({
@@ -117,9 +113,6 @@ export default function HelpLinesPage() {
     );
 
     const getColor = (category: string) => {
-        // Uniform color logic or just default to the purple in screenshot if requested?
-        // User asked for "the person symbol" matching the image which is purple.
-        // I will default to purple for all for uniformity based on "the person symbol" request.
         return 'bg-purple-100 text-purple-600 dark:bg-[#4c1d56] dark:text-[#dba6f0]';
     };
 
@@ -135,7 +128,6 @@ export default function HelpLinesPage() {
                     <div className="w-16"></div>
                 </div>
 
-                {/* Search Bar */}
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
@@ -149,7 +141,6 @@ export default function HelpLinesPage() {
                     />
                 </div>
 
-                {/* Admin Add Section */}
                 {isAdmin && (
                     <div className="bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-sm border border-orange-200 dark:border-orange-900/40">
                         <h3 className="font-bold mb-3 dark:text-white">Admin: Add Helpline</h3>
@@ -174,7 +165,6 @@ export default function HelpLinesPage() {
                     </div>
                 )}
 
-                {/* Contact List */}
                 <div className="space-y-3">
                     <h2 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-2">Tamil Nadu Emergency Contacts</h2>
 

@@ -35,7 +35,6 @@ export default function RootLayout({
               (function() {
                 try {
                   const storedTheme = localStorage.getItem('theme');
-                  // Default to dark if no preference, or if preference is 'dark'
                   if (storedTheme === 'dark' || (!storedTheme)) {
                     document.documentElement.classList.add('dark');
                   } else {

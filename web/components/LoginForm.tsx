@@ -9,7 +9,7 @@ import { db } from '../lib/firebase';
 export function LoginForm() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [isLogin, setIsLogin] = useState(false); // Toggle state
+    const [isLogin, setIsLogin] = useState(false);
 
     const [formData, setFormData] = useState({
         fullName: '',
@@ -17,16 +17,10 @@ export function LoginForm() {
         aadhar: '',
         phone: '',
         email: '',
-        password: '', // NEW
+        password: '',
         address: '',
         bloodGroup: ''
     });
-
-    // For Login: 'identity' can be Aadhar, Phone, or Email. We use 'aadhar' field in formData to capture it for now, 
-    // or better, let's add a robust 'loginIdentity' state or just repurpose the inputs.
-    // To keep it clean, let's use separate state for Login vs Register, OR map them intelligibly.
-    // Mapping: 
-    // Login -> Identity Input (maps to formData.aadhar temp), Password Input (maps to formData.password)
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -34,16 +28,13 @@ export function LoginForm() {
         const newErrors: Record<string, string> = {};
 
         if (isLogin) {
-            // Login Validation
             if (!formData.aadhar?.trim()) newErrors.aadhar = "Identity is required";
             if (!formData.password?.trim()) newErrors.password = "Password is required";
         } else {
-            // Register Validation
             if (!formData.fullName.trim()) newErrors.fullName = "Name is required";
             if (!formData.dob) newErrors.dob = "Date of Birth is required";
             if (!/^\d{12}$/.test(formData.aadhar)) newErrors.aadhar = "Aadhar must be exactly 12 digits";
             if (!/^\d{10}$/.test(formData.phone)) newErrors.phone = "Phone number must be 10 digits";
-            // Email is optional? User asked for it in registration list. Let's make it typical.
             if (!formData.email.trim()) newErrors.email = "Email is required";
             if (!formData.password || formData.password.length < 6) newErrors.password = "Password must be at least 6 chars";
             if (!formData.address.trim()) newErrors.address = "Address is required";
@@ -60,8 +51,6 @@ export function LoginForm() {
         setLoading(true);
 
         try {
-            // Admin Check (Hardcoded for safety/demo)
-            // Identity: nitsxcreation@gmail.com, Password: admin@01
             if (isLogin && formData.aadhar.toLowerCase() === 'nitsxcreation@gmail.com' && formData.password === 'admin@01') {
                 localStorage.setItem('user_profile', JSON.stringify({
                     fullName: 'Admin',
@@ -74,22 +63,16 @@ export function LoginForm() {
             }
 
             if (isLogin) {
-                // LOGIN LOGIC
-                // Identity could be Aadhar (12 digits), Phone (10 digits), or Email (@)
                 const input = formData.aadhar.trim();
                 let q;
 
                 if (input.includes('@')) {
-                    // Email Login
                     q = query(collection(db, 'users'), where('email', '==', input));
                 } else if (/^\d{12}$/.test(input)) {
-                    // Aadhar Login
                     q = query(collection(db, 'users'), where('aadhar', '==', input));
                 } else if (/^\d{10}$/.test(input)) {
-                    // Phone Login
                     q = query(collection(db, 'users'), where('phone', '==', input));
                 } else {
-                    // Fallback or username? Assuming Email if nothing else matches strict rules
                     q = query(collection(db, 'users'), where('email', '==', input));
                 }
 
@@ -101,9 +84,6 @@ export function LoginForm() {
                     return;
                 }
 
-                // Verify Password
-                // Note: In production you MUST hash passwords. Storing plain text is insecure.
-                // For this demo/prototype, we compare plain text.
                 const userDoc = snapshot.docs[0];
                 const userData = userDoc.data();
 
@@ -113,15 +93,10 @@ export function LoginForm() {
                     return;
                 }
 
-                // Success
                 localStorage.setItem('user_profile', JSON.stringify({ ...userData, id: userDoc.id }));
                 router.push('/');
 
             } else {
-                // REGISTER LOGIC
-                // Check if Aadhar or Phone or Email already exists
-                // Firestore doesn't support 'OR' queries across different fields easily in v9 without multiple queries or updated 'or' operator (avail in newer SDKs but let's be safe).
-                // Let's check Aadhar first as primary unique ID.
                 const qAadhar = query(collection(db, 'users'), where('aadhar', '==', formData.aadhar));
                 const snapAadhar = await getDocs(qAadhar);
 
@@ -133,7 +108,7 @@ export function LoginForm() {
 
                 await addDoc(collection(db, 'users'), {
                     ...formData,
-                    role: 'user', // Default role
+                    role: 'user',
                     timestamp: new Date().toISOString()
                 });
 
@@ -151,7 +126,6 @@ export function LoginForm() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
 
-        // Input restrictions for Registration Only (Login is flexible)
         if (!isLogin) {
             if (name === 'aadhar' && !/^\d*$/.test(value)) return;
             if (name === 'phone' && !/^\d*$/.test(value)) return;
@@ -163,7 +137,6 @@ export function LoginForm() {
 
     return (
         <div className="w-full max-w-md mx-auto bg-white dark:bg-neutral-800 p-8 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            {/* Toggle Switch */}
             <div className="flex justify-center mb-6">
                 <div className="bg-neutral-100 dark:bg-neutral-900 p-1 rounded-lg inline-flex">
                     <button
@@ -192,13 +165,12 @@ export function LoginForm() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
 
-                {/* LOGIN FORM */}
                 {isLogin ? (
                     <>
                         <div>
                             <label className="block text-sm font-medium mb-1 dark:text-neutral-300">Identity</label>
                             <input
-                                name="aadhar" // reusing key for identity input
+                                name="aadhar"
                                 type="text"
                                 value={formData.aadhar}
                                 onChange={handleChange}
@@ -221,7 +193,6 @@ export function LoginForm() {
                         </div>
                     </>
                 ) : (
-                    /* REGISTER FORM */
                     <>
                         <div>
                             <label className="block text-sm font-medium mb-1 dark:text-neutral-300">Full Name</label>

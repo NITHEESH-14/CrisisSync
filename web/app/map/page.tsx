@@ -13,7 +13,6 @@ export default function MapPage() {
 
     return (
         <div className="relative h-screen w-screen bg-neutral-900 flex flex-col">
-            {/* Header/Nav */}
             <div className="fixed top-6 left-20 z-50 flex gap-4 pl-4">
                 <button
                     onClick={() => router.back()}
@@ -23,7 +22,6 @@ export default function MapPage() {
                 </button>
             </div>
 
-            {/* Interactive Leaflet Map */}
             <div className="w-full h-full z-0">
                 <MapWithNoSSR />
             </div>

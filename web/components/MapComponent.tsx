@@ -3,7 +3,6 @@
 import { MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icon in Next.js
 import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -19,10 +18,10 @@ L.Icon.Default.mergeOptions({
 export default function MapComponent() {
     return (
         <MapContainer
-            center={[12.9716, 77.5946]} // Default to Bangalore or a central location
+            center={[12.9716, 77.5946]}
             zoom={13}
             scrollWheelZoom={true}
-            zoomControl={false} // Disable default zoom control
+            zoomControl={false}
             style={{ height: "100%", width: "100%" }}
             className="w-full h-full bg-neutral-900"
         >
@@ -30,7 +29,6 @@ export default function MapComponent() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {/* Custom Position for Zoom Control */}
             <ZoomControl position="topright" />
         </MapContainer>
     );

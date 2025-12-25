@@ -20,7 +20,6 @@ function WizardContent() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // Derive step from URL, default to 'type'
     const step = (searchParams.get('step') as 'type' | 'location' | 'details' | 'submitting') || 'type';
     const typeParam = searchParams.get('type');
 
@@ -33,7 +32,6 @@ function WizardContent() {
     });
     const [locationError, setLocationError] = useState('');
 
-    // Auto-close success message after 3 seconds
     useEffect(() => {
         if (step === 'submitting') {
             const timer = setTimeout(() => {
@@ -43,7 +41,6 @@ function WizardContent() {
         }
     }, [step, router]);
 
-    // Redirect to start if on a later step without data (e.g. refresh)
     useEffect(() => {
         if (step !== 'type' && !data.type) {
             router.replace(pathname);
@@ -63,13 +60,11 @@ function WizardContent() {
     };
 
     const handleBack = () => {
-        // If Manual Input is showing in Step 2, just hide it, don't go back in history yet
         if (step === 'location' && showManualInput) {
             setShowManualInput(false);
             return;
         }
 
-        // Otherwise, use browser history
         if (step === 'type') {
             router.push('/');
         } else {
@@ -97,7 +92,6 @@ function WizardContent() {
             },
             (error) => {
                 let msg = 'Unable to retrieve location.';
-                // Handle odd empty error objects or missing codes
                 if (error && error.code) {
                     if (error.code === 1) msg = 'Location permission denied.';
                     if (error.code === 2) msg = 'Location unavailable.';
@@ -107,7 +101,6 @@ function WizardContent() {
                 console.error("Location error:", error);
                 setLocationError(msg + " Switched to manual entry.");
 
-                // FORCE MANUAL INPUT IMMEDIATELY
                 setShowManualInput(true);
             },
             options
@@ -153,10 +146,8 @@ function WizardContent() {
         } catch (error) {
             console.error("Error submitting report:", error);
             alert("Failed to send alert. Check permissions or internet connection.");
-            // Ideally show error state, but for now just log it
         }
 
-        // Wait a bit purely for UX so they see "Submitting..." or immediate success
         await new Promise(resolve => setTimeout(resolve, 1500));
     };
 
@@ -219,14 +210,11 @@ function WizardContent() {
                         {!showManualInput ? (
                             <div className="text-center space-y-6">
                                 <div className="relative w-28 h-28 mx-auto inline-block">
-                                    {/* Circle Background Container with Overflow Hidden */}
                                     <div className="absolute inset-0 rounded-full overflow-hidden bg-blue-50 dark:bg-blue-900/30 border-4 border-white dark:border-neutral-700 shadow-xl">
-                                        {/* Map Pattern Background */}
                                         <div className="absolute inset-0 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/640px-World_map_blank_without_borders.svg.png')] bg-cover bg-center opacity-40 mix-blend-multiply dark:mix-blend-overlay"></div>
                                         <div className="absolute inset-0 bg-blue-500/10 rounded-full animate-pulse"></div>
                                     </div>
 
-                                    {/* Pin - Positioned to Pop Out */}
                                     <div className="relative z-10 w-full h-full flex items-center justify-center -translate-y-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-2xl transform hover:scale-110 transition-transform filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]">
                                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>

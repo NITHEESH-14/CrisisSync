@@ -2,7 +2,6 @@ import { GUIDANCE_DATA } from '@/lib/guidanceData';
 import Link from 'next/link';
 import { Button } from '@/components/Button';
 
-// Correctly typing params as a generic promise or object for Next.js 15
 export default async function GuidancePage({ params }: { params: Promise<{ type: string }> }) {
     const resolvedParams = await params;
     const { type } = resolvedParams;

@@ -17,7 +17,7 @@ export function EmergencyActions() {
             setStatus('sending');
             try {
                 const reportData = {
-                    type: 'panic', // Or 'immediate' or 'SOS'
+                    type: 'panic',
                     timestamp: new Date().toISOString(),
                     status: 'pending',
                     details: 'IMMEDIATE SOS BUTTON PRESSED',
@@ -33,15 +33,12 @@ export function EmergencyActions() {
 
                 await addDoc(collection(db, 'reports'), reportData);
 
-                // Simulate network delay slightly so user sees something happened
                 setTimeout(() => {
                     setStatus('idle');
-                    // Redirect to success page, which will auto-close to dashboard
                     router.push('/report?step=submitting&type=panic');
                 }, 800);
             } catch (error: any) {
                 console.error("SOS Error:", error);
-                // detailed error for debugging
                 alert(`Failed to send SOS: ${error.message || 'Unknown Error'}. Check connection.`);
                 setStatus('idle');
             }
@@ -49,16 +46,14 @@ export function EmergencyActions() {
 
         if (!navigator.geolocation) {
             console.error('Geolocation not supported');
-            createReport(); // Send without location
+            createReport();
             return;
         }
 
         const tryGetLocation = (highAccuracy: boolean) => {
-            // Check for insecure origin (HTTP on mobile blocks GPS)
-            // Check for insecure origin (HTTP on mobile blocks GPS)
             if (window.location.hostname !== 'localhost' && !window.isSecureContext) {
                 alert("⚠️ GPS ERROR: Mobile browsers block GPS on HTTP.\n\nSince we cannot get your location, the request is cancelled.\n\nPlease use the 'Report with Details' button to enter address manually.");
-                setStatus('idle'); // Stop loading
+                setStatus('idle');
                 return;
             }
 
@@ -73,19 +68,16 @@ export function EmergencyActions() {
                     console.error('Location error:', error);
 
                     if (highAccuracy) {
-                        // Retry with low accuracy if high fails (often works better indoors/mobile)
                         console.log("High accuracy failed, retrying with low accuracy...");
                         tryGetLocation(false);
                     } else {
-                        // Both failed
                         let msg = "Unknown location error";
                         if (error.code === 1) msg = "Permission denied. Please allow location access.";
                         if (error.code === 2) msg = "Position unavailable. Ensure device GPS is on.";
                         if (error.code === 3) msg = "Location request timed out.";
 
                         alert(`⚠️ SOS CANCELLED: We could not retrieve your location (${msg}).\n\nPlease use the manual report option.`);
-                        setStatus('idle'); // Stop loading
-                        // createReport(null); // Abort sending empty report
+                        setStatus('idle');
                     }
                 },
                 {
@@ -106,7 +98,6 @@ export function EmergencyActions() {
 
     return (
         <div className="w-full space-y-4">
-            {/* Immediate Report Button */}
             <Button
                 variant="ghost"
                 size="lg"
@@ -134,7 +125,6 @@ export function EmergencyActions() {
                 )}
             </Button>
 
-            {/* Standard Report Button */}
             <Button
                 variant="ghost"
                 size="lg"
