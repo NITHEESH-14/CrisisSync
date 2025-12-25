@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ---------------------------------------------------------
+    // 🛡️ SECURE AUDITING
+    // ---------------------------------------------------------
+    // Resolution Logs: Append-only. No one can edit or delete them.
+    match /resolution_logs/{logId} {
+      allow create: if true; 
+      allow read: if true;
+      allow update, delete: if false; 
+    }
+
+    // ---------------------------------------------------------
+    // 🔓 APP COLLECTIONS (Prototype Mode)
+    // ---------------------------------------------------------
+    // In production, you should add "if request.auth != null" to writes
+    
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    
+    match /reports/{reportId} {
+      allow read, write: if true;
+    }
+    
+    match /helplines/{helplineId} {
+      allow read, write: if true;
+    }
+    
+    match /organizations/{orgId} {
+      allow read, write: if true;
+    }
+    
+    match /volunteers/{volunteerId} {
+      allow read, write: if true;
+    }
+
+    // Fallback for other documents
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
